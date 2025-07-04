@@ -1,25 +1,26 @@
-//Actor
 using UnityEngine;
 
-public class Actor : MonoBehaviour {
-    public static Actor Instance { get; private set; }
+public class Actor : MonoBehaviour
+{
+    public string Name;
+    public Dialogue initialDialogue;
+    public Dialogue alternateDialogue; // 👈 Shown after first talk
+    private bool hasSpoken = false;
 
-    public void Awake() {
-        if (Instance == null) {
-            Instance = this;
+    public void SpeakTo()
+    {
+        if (!hasSpoken && initialDialogue != null)
+        {
+            DialogueManager.Instance.StartDialogue(Name, initialDialogue.RootNode);
+            hasSpoken = true;
         }
-    }
-    //public string Name;
-    //public Dialogue Dialogue;
-
-    //private void Update() {
-    //    if (Input.GetKeyDown(KeyCode.Space)) {
-    //        SpeakTo();
-    //    }
-    //}
-
-    // Trigger dialogue for this actor
-    public void SpeakTo(string Name, Dialogue Dialogue) {
-        DialogueManager.Instance.StartDialogue(Name, Dialogue.RootNode);
+        else if (alternateDialogue != null)
+        {
+            DialogueManager.Instance.StartDialogue(Name, alternateDialogue.RootNode);
+        }
+        else
+        {
+            Debug.Log($"{Name} has nothing new to say.");
+        }
     }
 }

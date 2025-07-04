@@ -8,9 +8,8 @@ public class Interact : MonoBehaviour
 
     public bool isInteracting;
     RaycastHit hit;
-    public Transform npcTarget;
 
-    Interactable currentInteractable; // Keep track of last interactable seen
+    private Interactable currentInteractable;
 
     private void Update()
     {
@@ -21,7 +20,7 @@ public class Interact : MonoBehaviour
     private void CheckForInteraction()
     {
         Ray ray = new Ray(interactSource.position, interactSource.forward);
-        Debug.DrawRay(interactSource.position, interactSource.forward, Color.green);
+        Debug.DrawRay(interactSource.position, interactSource.forward * interactDistance, Color.green);
 
         if (Physics.Raycast(ray, out hit, interactDistance, interactLayer))
         {
@@ -56,44 +55,69 @@ public class Interact : MonoBehaviour
 
     public void DoInteract()
     {
-        if (isInteracting && currentInteractable != null)
-        {
-            GameObject hitObj = hit.collider.gameObject;
-            GameObject player = gameObject;
-
-            if (player == null)
-            {
-                Debug.LogWarning("Player not found.");
-                return;
-            }
-
-            if (!currentInteractable.canPick)
-            {
-                HandleNonPickupInteraction(hitObj, player);
-            }
-            else if (!player.GetComponentInChildren<PickUpAndDrop>().isPicked)
-            {
-                player.GetComponentInChildren<PickUpAndDrop>().Pick(hit.collider.gameObject);
-            }
-        }
-        else
+        if (!isInteracting || currentInteractable == null || hit.collider == null)
         {
             Debug.Log("Interaction failed.");
+            return;
+        }
+
+        GameObject hitObj = hit.collider.gameObject;
+        GameObject player = gameObject;
+
+        switch (currentInteractable.interactableType)
+        {
+            case Interactable.InteractableType.Pickable:
+                TryPick(player, hitObj);
+                break;
+
+            case Interactable.InteractableType.Normal:
+                currentInteractable.Interact();
+                break;
+
+            case Interactable.InteractableType.NPC:
+                TryTalkToNPC(currentInteractable);
+                break;
+
+            default:
+                Debug.LogWarning("Unknown interactable type.");
+                break;
         }
     }
 
-    private void HandleNonPickupInteraction(GameObject hitObj, GameObject player)
+    private void TryPick(GameObject player, GameObject hitObj)
     {
-        string tag = hitObj.tag;
-        DialogueData data = DialogueList.Instance.GetDialogueByTag(tag);
-        if (data != null)
+        PickUpAndDrop pickScript = player.GetComponentInChildren<PickUpAndDrop>();
+        if (pickScript != null && !pickScript.isPicked)
         {
-            Actor.Instance.SpeakTo(data.characterName, data.dialogue);
-            LookTarget.instance.LookAt(npcTarget);
+            pickScript.Pick(hitObj);
         }
         else
         {
-            Debug.Log("No data found for this tag: " + tag);
+            Debug.Log("Already holding something or pickup script not found.");
         }
     }
+
+    private void TryTalkToNPC(Interactable npc)
+    {
+        Actor actor = npc.GetComponent<Actor>();
+
+        if (actor != null)
+        {
+            actor.SpeakTo();
+
+            if (npc.lookTarget != null)
+            {
+                LookTarget.instance.LookAt(npc.lookTarget);
+            }
+            else
+            {
+                Debug.LogWarning("Look target not set on NPC.");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Actor script missing on NPC.");
+        }
+    }
+
 }

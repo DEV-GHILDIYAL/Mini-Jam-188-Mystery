@@ -3,78 +3,99 @@ using System.Threading;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-
-public class DialogueManager : MonoBehaviour {
+ 
+public class DialogueManager : MonoBehaviour
+{
     public static DialogueManager Instance { get; private set; }
-
+ 
     // UI references
     public GameObject DialogueParent; // Main container for dialogue UI
     public TextMeshProUGUI DialogTitleText, DialogBodyText; // Text components for title and body
     public GameObject responseButtonPrefab; // Prefab for generating response buttons
     public Transform responseButtonContainer; // Container to hold response buttons
-
-    private void Awake() {
+ 
+    private void Awake()
+    {
         // Singleton pattern to ensure only one instance of DialogueManager
-        if (Instance == null) {
+        if (Instance == null)
+        {
             Instance = this;
         }
-        else {
+        else
+        {
             Destroy(gameObject);
         }
-
+ 
         // Initially hide the dialogue UI
         HideDialogue();
     }
-
+ 
     // Starts the dialogue with given title and dialogue node
-    public void StartDialogue(string title, DialogueNode node) {
+    public void StartDialogue(string title, DialogueNode node)
+    {
+        FirstPersonController.instance.enabled = false;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         // Display the dialogue UI
         ShowDialogue();
-
+ 
         // Set dialogue title and body text
         DialogTitleText.text = title;
         DialogBodyText.text = node.dialogueText;
-
+ 
         // Remove any existing response buttons
-        foreach (Transform child in responseButtonContainer) {
+        foreach (Transform child in responseButtonContainer)
+        {
             Destroy(child.gameObject);
         }
-
+ 
         // Create and setup response buttons based on current dialogue node
-        foreach (DialogueResponse response in node.responses) {
+        foreach (DialogueResponse response in node.responses)
+        {
             GameObject buttonObj = Instantiate(responseButtonPrefab, responseButtonContainer);
             buttonObj.GetComponentInChildren<TextMeshProUGUI>().text = response.responseText;
-
+ 
             // Setup button to trigger SelectResponse when clicked
             buttonObj.GetComponent<Button>().onClick.AddListener(() => SelectResponse(response, title));
         }
     }
-
+ 
     // Handles response selection and triggers next dialogue node
-    public void SelectResponse(DialogueResponse response, string title) {
+    public void SelectResponse(DialogueResponse response, string title)
+    {
         // Check if there's a follow-up node
-        if (!response.nextNode.IsLastNode()) {
+        if (!response.nextNode.IsLastNode())
+        {
             StartDialogue(title, response.nextNode); // Start next dialogue
         }
-        else {
+        else
+        {
             // If no follow-up node, end the dialogue
             HideDialogue();
-            LookTarget.instance.StopLooking();
+
+            FirstPersonController.instance.enabled = true;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+            FirstPersonController.instance.talking = false;
         }
     }
-
+ 
     // Hide the dialogue UI
-    public void HideDialogue() {
+    public void HideDialogue()
+    {
         DialogueParent.SetActive(false);
     }
-
+ 
     // Show the dialogue UI
-    private void ShowDialogue() {
+    private void ShowDialogue()
+    {
         DialogueParent.SetActive(true);
     }
-
+ 
     // Check if dialogue is currently active
-    public bool IsDialogueActive() {
+    public bool IsDialogueActive()
+    {
         return DialogueParent.activeSelf;
     }
 }
+ 
